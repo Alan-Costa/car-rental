@@ -3,12 +3,18 @@ package com.api.carrental.controllers;
 import com.api.carrental.dtos.ClientDto;
 import com.api.carrental.models.Client;
 import com.api.carrental.services.ClientService;
+import com.google.gson.Gson;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -25,7 +31,28 @@ public class ClientController {
     }
 
     @PostMapping
-    public ResponseEntity<Object> saveClient(@RequestBody @Valid ClientDto clientDto) {
+    public ResponseEntity<Object> saveClient(@RequestBody @Valid ClientDto clientDto) throws Exception {
+
+        URL url = new URL("https://viacep.com.br/ws/" + clientDto.getCep() + "/json/");
+        URLConnection connection = url.openConnection();
+        InputStream is = connection.getInputStream();
+        BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+
+        String cep = "";
+        StringBuilder jsonCep = new StringBuilder();
+
+        while ((cep = br.readLine()) != null) {
+            jsonCep.append(cep);
+        }
+
+        ClientDto clientDtoAux = new Gson().fromJson(jsonCep.toString(), ClientDto.class);
+        clientDto.setCep(clientDtoAux.getCep());
+        clientDto.setLogradouro(clientDtoAux.getLogradouro());
+        clientDto.setComplemento(clientDtoAux.getComplemento());
+        clientDto.setBairro(clientDtoAux.getBairro());
+        clientDto.setLocalidade(clientDtoAux.getLocalidade());
+        clientDto.setUf(clientDtoAux.getUf());
+
         var client = new Client();
         BeanUtils.copyProperties(clientDto, client);
         client.setRegistrationDate(LocalDateTime.now(ZoneId.of("UTC")));
